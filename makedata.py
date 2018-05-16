@@ -1,9 +1,10 @@
 import numpy as np
 import glob
 
-sequencedict = {'A' : '1', 'C' : '2', 'G' : '3', 'U' : '4'}
+
+sequencedict = {'A' : '0', 'C' : '1', 'G' : '2', 'U' : '3'}
 for letter in 'BDEFHIJKLMNOPQRSTVWXYZ':
-    sequencedict.update({letter : '5'})
+    sequencedict.update({letter : '4'})
 
 
 def getsequenceandstructure(filename, headersize):
@@ -16,6 +17,12 @@ def getsequenceandstructure(filename, headersize):
     
     return sequence, structure, state
 
+# convert list of .ct files into a textfile; each .ct file is four lines:
+#
+# filename
+# sequence (A=0, C=1, G=2, U=3, all else = 4)
+# structure
+# state (unpaired=0, paired=1)
 def writedatafile(paths, outfile, headersize):
     
     f = open(outfile, 'w')
@@ -33,11 +40,16 @@ def writedatafile(paths, outfile, headersize):
 
 if __name__ == '__main__':
     
-    globstring = 'data/raw/crw16s/**/*.nopct'
-    paths = glob.glob(globstring, recursive = True)
-    outfile = 'data/crw16s-comparative.txt'
-    headersize = 5
+    # CHANGE THESE IF YOU'RE USING YOUR OWN DATA
+    datadirectory = 'rawdata'  # directory with .ct files
+    outfile = 'data/crw5s-comparative.txt'  # output file to write to
+    headersize = 5  # number of lines in the .ct file before the sequence begins
     
+    
+    # get all filepaths
+    ctglobstring = datadirectory + '/**/*.ct'
+    nopctglobstring = datadirectory + '/**/*.nopct'
+    paths = glob.glob(ctglobstring, recursive = True) + glob.glob(nopctglobstring, recursive = True)
     
     writedatafile(paths, outfile, headersize)
     
