@@ -4,15 +4,17 @@ Devin Willmott, Dr. David Murrugarra, Dr. Qiang Ye
 
 ---
 
-Required packages:
+Required:
 ------
-* glob2
-* numpy
-* theano
-* keras
+* python 3.6
+* numpy 1.14.3
+* keras 2.1.5
+* theano 0.9.0 or tensorflow 1.4.1
+* (Optional) CUDA 8.0 and cuDNN 5.1
 
 Instructions
 ------
+
 1) Get training set: From [http://www.rna.ccbb.utexas.edu/DAT/3C/SBPI/index.php], download and unzip all of the 16S rRNA files in the nopct format.
 
 2) Get test set: From [http://users-birc.au.dk/zs/SHAPEsimulations/], download the native test set .ct files (contained in the link named '.zip archive').
