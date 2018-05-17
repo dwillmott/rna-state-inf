@@ -177,9 +177,8 @@ for i in range(epochs):
     
     epochaccs = []
     
-    for testset, testsetlabels, setname in testsets:
-        testpredictions = model.predict(testset_x)
-        epochaccs.append(tools.runmetrics(testset_yhat, testset_y, setname = setname, machine = "RNN"))
+    testset_yhat = model.predict(testset_x)
+    epochaccs.append(tools.runmetrics(testset_yhat, testset_y, setname = "Zsuzsanna Set", machine = "RNN"))
     
     acc.append(epochaccs)
     

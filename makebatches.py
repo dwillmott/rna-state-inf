@@ -75,7 +75,7 @@ def makebatch(datafile, batchsize, batchindices = None, totalsize = None, maxlen
     
     # make y
     states = [sample[2][:maxlength] + (maxlength - length)*[2] for sample, length in zip(data, lengths)]
-    statearray = np.stack([keras.utils.to_categorical(state, num_classes=3) for state in states])[:,:,1:]
+    statearray = np.stack([keras.utils.to_categorical(state, num_classes=3) for state in states])[:,:,:2]
     
     return sequencearray, statearray
 
