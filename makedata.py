@@ -17,14 +17,8 @@ def getsequenceandstructure(filename, headersize):
     
     return sequence, structure, state
 
-# convert list of .ct files into a textfile; each .ct file is four lines:
-#
-# filename
-# sequence (A=0, C=1, G=2, U=3, all else = 4)
-# structure
-# state (unpaired=0, paired=1)
+
 def writedatafile(paths, outfile, headersize):
-    
     f = open(outfile, 'w')
     
     for path in paths:
