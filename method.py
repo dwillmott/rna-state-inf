@@ -3,67 +3,57 @@ import sys
 import subprocess
 
 
-def getprobability(x):
+# takes output from LSTM and creates a .shape file from the predictions
+def makeshape(shapetype, a = 0.214, b = 0.6624, probfile, outfile = None):
     s = 0.3603
-    if x >= 0.5:
-        shape = ((a-s)/0.5)*(x-1)+a
-    if x < 0.5:
-        shape = ((s-b)/0.5)*x+b
+    pairdict = {'U' : 0.0, 'P' : 1.0}
     
-    return shape
-
-
-def makeshape(functiontype, a = 0.214, b = 0.6624):
-    s = 0.3603
-    
-    resultfolder = 'shape/'+functiontype+'/'
+    outfolder = 'shape/%s/' % (shapetype,)
+    if outfile == None:
+        outfile = outfolder + probfile[14:-4] + '.shape'
 
     if not os.path.exists(resultfolder):
         os.system('mkdir ' + resultfolder)
     
-    for zs, zslength in zip(zsnames, zslengths):
+    for zs, testlength in zip(testnames, testlengths):
         probfile = 'probabilities/%s-prob.txt' % (zs,)
         name = zs
         
-        #read in probability file
+        #read in probability file, ignore first two lines
         prob_file = open(probfile, 'r')
-        
         prob_file.readline()
         prob_file.readline()
 
         seq_index = []
         lstm_prob = []
         
-        pairdict = {'U' : 0.0, 'P' : 1.0}
-        
         for line in prob_file.readlines():
             if line != '\n':
                 splitline = line.split()
                 seq_index.append(int(splitline[0]))
                 
-                if functiontype == 'nativestate':
+                if shapetype == 'nativestate':
                     lstm_prob.append(pairdict[splitline[2]]) # look at native pair 'U' or 'P', convert to float
-                if functiontype == 'predictedstate':
+                if shapetype == 'predictedstate':
                     lstm_prob.append(float(splitline[5])) # use outputted probability
-        
         
         prob_file.close();
 
         #open output file
-        outfile = name + '-%s.shape' % (functiontype,)
+        outfile = name + '-%s.shape' % (shapetype,)
         output_file = open(resultfolder+outfile, 'w')
-        
 
-        #for each position, write a SHAPE value depending on the probability 
-        for i in range(zslength):
-            #shapevalue = getprobability(lstm_prob[i])
-            shapevalue = ((a-s)/0.5)*(lstm_prob[i]-1)+a if lstm_prob[i] >= 0.5 else ((s-b)/0.5)*lstm_prob[i]+b
-            position = seq_index[i];
-            output_file.write('%d %.3f \n' % (position, shapevalue))
+        #for each position, write a SHAPE value depending on the probability
+        for i in range(testlength):
+            if lstm_prob[i] >= 0.5:
+                shapevalue = ((a-s)/0.5)*(lstm_prob[i]-1)+a
+            else:
+                shapevalue = ((s-b)/0.5)*lstm_prob[i]+b
+            output_file.write('%d %.3f \n' % (seq_index[i], shapevalue))
 
         output_file.close()
 
-
+# takes two .ct files and returns the set of base pairs
 def getpairs(structfile):
     real_struct_file = open(structfile, 'r');
 
@@ -80,7 +70,7 @@ def getpairs(structfile):
     
     return set(pairs)
 
-
+# takes two sets of base pairs and returns PPV, sen, accuracy
 def getmetrics(native, predicted, name = None):
     tp = native.intersection(predicted)
     fn = native.difference(predicted)
@@ -92,42 +82,38 @@ def getmetrics(native, predicted, name = None):
     
     return PPV, sen, accuracy
 
-
+# 
 def comparects(tocompare):
     
     print('\n\n     %s direction     \n\n' % (tocompare))
 
-    for zsname in zsnames:
-        print('--------  %s  --------\n' % (zsname,))
-        native_pairs = getpairs('nativestructures/%s-native-nop.ct' % (zsname,))
-        comparison_pairs = getpairs('structures/%s/%s-%s.ct' % (tocompare, zsname, tocompare))
+    for testname in testnames:
+        print('--------  %s  --------\n' % (testname,))
+        native_pairs = getpairs('nativestructures/%s-native-nop.ct' % (testname,))
+        comparison_pairs = getpairs('structures/%s/%s-%s.ct' % (tocompare, testname, tocompare))
         metrics = getmetrics(native_pairs, comparison_pairs, tocompare)
         print('PPV: %0.3f     sen: %0.3f     acc: %0.3f\n' % tuple(metrics))
 
-
-def makestructures(subfolder):
-    filepath = 'structures/%s' % (subfolder,)
-    shapefolder = 'shape/%s' % (subfolder,)
+# takes a sequence and shape type and performs (directed) NNTM using gtfold
+def makestructures(shapetype):
+    filepath = 'structures/%s' % (shapetype,)
+    shapefolder = 'shape/%s' % (shapetype,)
     if not os.path.exists(filepath):
         os.makedirs(filepath)
 
-    for zsname in zsnames:
-        runstring = 'gtmfe sequences/%s-sequence.txt ' % (zsname,)
-        outputstring = '--output %s/%s-%s' % (filepath, zsname, subfolder)
+    for testname in testnames:
+        runstring = 'gtmfe sequences/%s-sequence.txt ' % (testname,)
+        outputstring = '--output %s/%s-%s' % (filepath, testname, shapetype)
         
-        print('\n\nmaking %s structure for %s \n\n' % (subfolder, zsname))
+        print('\n\nmaking %s structure for %s \n\n' % (shapetype, testname))
         
-        if subfolder == 'noshape':
+        if shapetype == 'noshape':
             subprocess.call(runstring + outputstring, shell=True)
         else:
-            shapestring = ' --useSHAPE %s/%s-%s.shape' % (shapefolder, zsname, subfolder)
+            shapestring = ' --useSHAPE %s/%s-%s.shape' % (shapefolder, testname, shapetype)
             subprocess.call(runstring + outputstring + shapestring, shell=True)
 
 
-
-filenames = ['noshape-results.txt',
-             'nativestate-results.txt',
-             'predictedstate-results.txt']
 
 if __name__ == '__main__':
     
@@ -135,12 +121,14 @@ if __name__ == '__main__':
         if not os.path.exists(direc):
             os.makedirs(direc)
     
-    zsnames = ['cuniculi', 'vnecatrix', 'celegans', 'nidulansM',
+    testnames = ['cuniculi', 'vnecatrix', 'celegans', 'nidulansM',
            'TabacumC', 'cryptomonasC', 'musM', 'gallisepticum',
            'syne', 'ecoli', 'subtilis', 'desulfuricans',
            'reinhardtiiC', 'maritima', 'tenax', 'volcanii']
+    
+    testprobabilities = ['probabilities/%s-prob.txt' % (seq,) for seq in testnames]
 
-    zslengths = [1295, 1244, 697, 1437,
+    testlengths = [1295, 1244, 697, 1437,
              1486, 1493, 956, 1519,
              1488, 1542, 1553, 1551,
              1474, 1562, 1503, 1474]
