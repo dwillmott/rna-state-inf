@@ -121,35 +121,30 @@ batchgenerator = makebatches.batch_generator('data/crw16s-filtered.txt', batchsi
 
 testset_x, testset_y = makebatches.makebatch('data/testset.txt', 16, np.arange(16), 16)
 
-acc = []
+metrics = []
 t1 = time()
 
 for i in range(epochs):
     print('----------------------\nTraining Epoch %d\n' % (i+1))
     
     # train
-    for j in range(trainsize//batchsize):
-        batch_x, batch_y = next(batchgenerator)
-        loss = model.train_on_batch(batch_x, batch_y)
-        if j % 10 == 0 and args.verbose:
-            print(trainsize//batchsize, j, loss)
+    #for j in range(trainsize//batchsize):
+        #batch_x, batch_y = next(batchgenerator)
+        #loss = model.train_on_batch(batch_x, batch_y)
+        #if j % 10 == 0 and args.verbose:
+            #print(trainsize//batchsize, j, loss)
     
-    epochaccs = []
-    
+    # predict on test set, print results
     testset_yhat = model.predict(testset_x)
-    epochmetrics = tools.runmetrics(testset_y, testset_yhat, setname = "Test Set", machine = "RNN"))
-    epochsmetrics.append(epochmetrics)
+    epochmetrics = tools.runmetrics(testset_y, testset_yhat, setname = "Test Set", machine = "RNN")
+    metrics.append(epochmetrics)
     
-    acc.append(epochaccs)
-    
+    # write predictions to file
     if args.outputs:
         tools.writeoutput(testset_x, testset_y, testset_yhat, machine = "RNN", epoch = i+1)
     
-    print('(%4.1f seconds)\n\n' % (time() - t1))
-    
-    
     model.save("rnns/rnnepoch%02d.h5" % (i+1))
-    
+    print('(%4.1f seconds)\n\n' % (time() - t1))
     sys.stdout.flush()
 
 print
