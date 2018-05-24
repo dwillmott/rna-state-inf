@@ -66,36 +66,6 @@ hiddensizes = args.hiddensizes
 if timesteps == 0:
     timesteps = None
 
-# load in data
-#crwdata = np.load("data/crw16s.npy")
-#crwdata = np.random.permutation(crwdata) # shuffle samples
-
-#testsize = int(samples*testproportion)
-#trainsize = samples - testsize
-
-## break into X/Y, train/test
-#crwdata = crwdata[:samples,:timesteps,:]
-#sequences, labels = crwdata[:,:,1:6], crwdata[:,:,7:9]
-
-#cutindex = int(sequences.shape[0]*(1 - testproportion))
-#X, Xtest = sequences[:cutindex], sequences[cutindex:]
-#Y, Ytest = labels[:cutindex], labels[cutindex:]
-
-
-
-## load test sets
-#testsetpaths = ['data/zs.npy', 'data/crw23s.npy', 'data/crw5s.npy']
-#testsetnames = ['Zsuzsanna Set', '23S Set', '5S Set']
-
-##testsets = [(X, Y, 'Training Set', X.shape[0]), (Xtest, Ytest, 'Validation Set', Xtest.shape[0])]
-#testsets = [(Xtest, Ytest, 'Validation Set')]
-
-#for path, name in zip(testsetpaths, testsetnames):
-    #testset = np.load(path)
-    #testsets.append((testset[:,:,1:6], testset[:,:,7:9], name))
-
-#print([testset[2] for testset in testsets])
-#print([testset[1].shape for testset in testsets])
     
 if args.load:
     if not loadfile:
@@ -119,21 +89,17 @@ if args.load:
 # make model
 model = Sequential()
 
-lstmargdict = {'return_sequences':True, 'kernel_regularizer':regularizer,
-               'recurrent_regularizer':regularizer, 'dropout':dropprob, 'implementation':2}
-
 convargdict = {'kernel_size': kernelsize, 'strides':1, 'activation':'relu',
                'padding':'same', 'kernel_regularizer':regularizer}
 
+lstmargdict = {'return_sequences':True, 'kernel_regularizer':regularizer,
+               'recurrent_regularizer':regularizer, 'dropout':dropprob, 'implementation':2}
+
 model.add(Conv1D(filters = convsize, input_shape = (None, datadim), **convargdict))
-#model.add(Conv1D(filters = 50, **convargdict))
-#model.add(BatchNormalization())
 
 for h in hiddensizes:
     model.add(Bidirectional(LSTM(h, **lstmargdict)))
 
-#model.add(BatchNormalization())
-#model.add(Conv1D(filters = 50, **convargdict))
 convargdict.update({'activation':'softmax'})
 model.add(Conv1D(filters = 2, **convargdict))
 
@@ -146,51 +112,41 @@ model.compile(optimizer=opt, loss='binary_crossentropy', metrics=[])
 
 print(model.summary())
 
-# print machine description
-#layers = [l.layer if 'layer' in l.get_config() else l for l in model.layers] # for bidirectional
-#tools.printstart(layers, trainsize, testsize, batchsize, timesteps, datadim, epochs, reg, dropprob, args.lr, args.lrdecay, optim)
-
 # make output directories
 tools.makernndirs()
-
-# set up array print options
-np.set_printoptions(precision=6, threshold=10000, suppress=True)
 
 # set up training, time variables
 trainsize = makebatches.findsize('data/crw16s-filtered.txt')
 batchgenerator = makebatches.batch_generator('data/crw16s-filtered.txt', batchsize, length = timesteps)
 
-testset_x, testset_y = makebatches.makebatch('data/zs.txt', 16, np.arange(16), 16)
+testset_x, testset_y = makebatches.makebatch('data/testset.txt', 16, np.arange(16), 16)
 
 acc = []
 t1 = time()
 
 for i in range(epochs):
-    print('----------------------\n')
-    print('Training Epoch %d\n' % (i+1))
+    print('----------------------\nTraining Epoch %d\n' % (i+1))
     
     # train
     for j in range(trainsize//batchsize):
         batch_x, batch_y = next(batchgenerator)
         loss = model.train_on_batch(batch_x, batch_y)
-        print(trainsize//batchsize, j, loss)
+        if j % 10 == 0 and args.verbose:
+            print(trainsize//batchsize, j, loss)
     
     epochaccs = []
     
     testset_yhat = model.predict(testset_x)
-    epochaccs.append(tools.runmetrics(testset_yhat, testset_y, setname = "Zsuzsanna Set", machine = "RNN"))
+    epochmetrics = tools.runmetrics(testset_y, testset_yhat, setname = "Test Set", machine = "RNN"))
+    epochsmetrics.append(epochmetrics)
     
     acc.append(epochaccs)
     
-    #if args.outputs:
-        #tools.outputs(ZX[:16], ZY, ZYhat, i+1)
+    if args.outputs:
+        tools.writeoutput(testset_x, testset_y, testset_yhat, machine = "RNN", epoch = i+1)
     
     print('(%4.1f seconds)\n\n' % (time() - t1))
     
-    #if args.lrdecay != 1:
-        #print("Changing lr: %f" % (opt.lr.get_value())),
-        #opt.lr.set_value(np.float32(opt.lr.get_value()*(args.lrdecay)))
-        #print("to %f\n" % (opt.lr.get_value()))
     
     model.save("rnns/rnnepoch%02d.h5" % (i+1))
     

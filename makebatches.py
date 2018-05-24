@@ -71,11 +71,11 @@ def makebatch(datafile, batchsize, batchindices = None, totalsize = None, maxlen
     
     # make x
     sequences = [sample[0][:maxlength] + (maxlength - length)*[5] for sample, length in zip(data, lengths)]
-    sequencearray = np.stack([keras.utils.to_categorical(seq, num_classes=6) for seq in sequences])[:,:,1:]
+    sequencearray = np.stack([keras.utils.to_categorical(seq, num_classes=6) for seq in sequences])[:,:,:-1]
     
     # make y
     states = [sample[2][:maxlength] + (maxlength - length)*[2] for sample, length in zip(data, lengths)]
-    statearray = np.stack([keras.utils.to_categorical(state, num_classes=3) for state in states])[:,:,:2]
+    statearray = np.stack([keras.utils.to_categorical(state, num_classes=3) for state in states])[:,:,:-1]
     
     return sequencearray, statearray
 
@@ -122,10 +122,11 @@ def makebatch(datafile, batchsize, batchindices = None, totalsize = None, maxlen
 
 def batch_generator(datafile, batchsize, length = None):
     totalsize = findsize(datafile)
+    totalsize = (totalsize//batchsize)*batchsize
     indexlist = np.random.permutation(totalsize)
         
     while True:
-        for i in range(0, totalsize//batchsize, batchsize):
+        for i in range(0, totalsize, batchsize):
             indices = indexlist[i:i+batchsize]
             yield makebatch(datafile, batchsize, indices, maxlength = length)
 

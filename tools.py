@@ -4,126 +4,70 @@ import time
 import sys
 
 
-# print(machine & dataset info at start of training
-def printstart(layers, trainsize, testsize, batchsize, timesteps, datadim, epochs, reg, dropprob, lr, lrdecay, optim):
-    print('\nMACHINE:\n')
-    print(str(len(layers)) + '-layer RNN')
-    #print('Layer Sizes:', [datadim] + [l.output_dim for l in layers if 'dropout' not in l.name]
-    print('Optimizer: %s' % (optim,))
-    print('Learning rate: %.4f' % (lr,))
-    print('Learning rate decay: %.2f' % (lrdecay,))
-    if reg:
-        print('L2 regularization coefficient = %.4f' % (reg,))
-    else:
-        print('No L2 regularization')
-    if dropprob:
-        print('Dropout with drop probability %.2f' % (dropprob,))
-    else:
-        print('No dropout')
+def makernndirs():    
+    dirs = ['rnns', 'predictions', 'predictions/rnn']
     
-    print('\nDATASET:\n')
-    print('%d training sequences, %d test sequences' % (trainsize, testsize))
-    print('%d training batches of size %d' % (trainsize/batchsize, batchsize))
-    print('%d test batches of size %d' % (testsize/batchsize, batchsize))
-    print('Using first %d time steps' % (timesteps,))
-    print('%d epochs\n\n' % (epochs,))
-
-
-def makernndirs():
-    zsnames = ['cuniculi', 'vnecatrix', 'celegans', 'nidulansM', 'TabacumC', 'cryptomonasC', 'musM', 'gallisepticum', 'syne', 'ecoli', 'subtilis', 'desulfuricans', 'reinhardtiiC', 'maritima', 'tenax', 'volcanii']
-    
-    dirs = ['rnns', 'text']
-    dirs += ["text/%.5s" % (zsname) for zsname in zsnames]
-    
-    for d in dirs:
+    for d in ['rnns', 'predictions', 'predictions/rnn']:
         if not os.path.exists(d):
             os.makedirs(d)
+
 
 def makehmmdirs():
-    zsnames = ['cuniculi', 'vnecatrix', 'celegans', 'nidulansM', 'TabacumC', 'cryptomonasC', 'musM', 'gallisepticum', 'syne', 'ecoli', 'subtilis', 'desulfuricans', 'reinhardtiiC', 'maritima', 'tenax', 'volcanii']
+    dirs = ['hmms', 'predictions', 'predictions/rnn']
     
-    dirs = ['hmms', 'hmmtext']
-    dirs += ["hmmtext/%.5s" % (zsname) for zsname in zsnames]
-    
-    for d in dirs:
+    for d in ['hmms', 'predictions', 'predictions/rnn']:
         if not os.path.exists(d):
             os.makedirs(d)
 
 
-def runmetrics(predicted, actual, setname, machine):
-    # CLASSES ARE:
-    #
-    # 0: unpaired
-    # 1: paired
+def runmetrics(actual, predicted, setname, machine):
     # 
-    #print(predicted.shape, actual.shape)
+    # classes are 0 (unpaired), 1 (paired), 2 (end of sequence)
+    
+    testnames = ['cuniculi', 'vnecatrix', 'celegans', 'nidulansM',
+                'TabacumC', 'cryptomonasC', 'musM', 'gallisepticum',
+                'syne', 'ecoli', 'subtilis', 'desulfuricans',
+                'reinhardtiiC', 'maritima', 'tenax', 'volcanii']
     
     # predicted & actual from RNN is an np array of shape (samples, timesteps, classes): probability predictions
     if machine == 'RNN':
-        y = np.argmax(np.concatenate([actual, 1 - np.sum(actual, axis=-1, keepdims=True)], axis=-1), axis=-1)
-        #y = np.argmax(actual, axis = -1)
-        yhat = np.argmax(predicted, axis = -1)
+        sequencelengths = [np.trim_zeros(np.sum(act, axis = -1)).size for act in actual]
+        y = [np.argmax(actual[i], axis = -1)[:sequencelengths[i]] for i in range(actual.shape[0])]
+        yhat = [np.argmax(predicted[i], axis = -1)[:sequencelengths[i]] for i in range(predicted.shape[0])]
     
-    
-    
-    # predicted & actual from HMM is a list of np arrays of length (timesteps, ): class predictions
     if machine == 'HMM':
-        maxlength = max([s.shape[-1] for s in predicted])
-        y = np.concatenate([np.pad(s, (0, maxlength - s.shape[-1]), 'constant', constant_values = (2,))[None, :] for s in actual], axis = 0)
-        yhat = np.concatenate([np.pad(s, (0, maxlength - s.shape[-1]), 'constant', constant_values = (2,))[None,:] for s in predicted], axis = 0)
+        y = actual
+        yhat = predicted
     
-    print
-    print('%s Metrics' % setname)
-    print
+    print('\n%s Metrics\n' % setname)
     
-    # actual
-    unpaired = y == 0
-    paired = y == 1
-    
-    # predicted
-    negative = yhat == 0
-    positive = yhat == 1
-    
-    
-    tpos = np.logical_and(positive, paired)
-    fpos = np.logical_and(positive, unpaired)
-    tneg = np.logical_and(negative, unpaired)
-    fneg = np.logical_and(negative, paired)
-    
-    
-    if setname == 'Zsuzsanna Set':
-        # print(metrics for each zsuzsanna sequence
-        zsnames = ['cuniculi', 'vnecatrix', 'celegans', 'nidulansM', 'TabacumC', 'cryptomonasC', 'musM', 'gallisepticum', 'syne', 'ecoli', 'subtilis', 'desulfuricans', 'reinhardtiiC', 'maritima', 'tenax', 'volcanii']
-        
-        tp = tpos.sum(axis=1).astype(float)
-        tn = tneg.sum(axis=1).astype(float)
-        fp = fpos.sum(axis=1).astype(float)
-        fn = fneg.sum(axis=1).astype(float)
-        
-        po = tp + fp
-        ne = tn + fn
-        tr = tp + tn
-        fa = fp + fn
-        total = (tp + fn + tn + fp)
-        acc = (tp + tn)/total
-        ppv = tp/(tp + fp + 10e-5)
-        sen = tp/(tp + fn + 10e-5)
-        
-        results = np.stack([total,tr,fa,tp,tn,fp,fn,tp/total,tn/total,fp/total,fn/total,acc,ppv,sen]).T
-        
+    if setname == 'Test Set':
         print("          NAME  | TOTAL  |  TRUE  FALSE  | TPOS  TNEG  FPOS  FNEG  |   TPOS    TNEG    FPOS    FNEG  |    ACC    PPV    SEN")
-        for i in range(fneg.shape[0]):
-            print('%14s  |  %4d  |  %4d   %4d  | %4d  %4d  %4d  %4d  |  %.3f   %.3f   %.3f   %.3f  |  %.3f  %.3f  %.3f' % ((zsnames[i],) + tuple(results[i])))
-        print
     
-    tp = tpos.sum()
-    fn = fneg.sum()
-    tn = tneg.sum()
-    fp = fpos.sum()
+    metrics = []
+    for i, (y_seq, yhat_seq) in enumerate(zip(y, yhat)):
+        tp = np.count_nonzero(y_seq * yhat_seq)
+        fp = np.count_nonzero((1-y_seq) * yhat_seq)
+        tn = np.count_nonzero((1-y_seq) * (1 -yhat_seq))
+        fn = np.count_nonzero(y_seq * (1-yhat_seq))
+        
+        metrics.append([tp, fp, tn, fn])
     
+        if setname == 'Test Set':
+            # print metrics for each test set sequence
+            total = tp + fn + tn + fp
+            acc = (tp + tn)/total
+            ppv = tp/(tp + fp + 10e-5)
+            sen = tp/(tp + fn + 10e-5)
+            
+            printstring = (testnames[i],total,tp+tn,fp+fn,tp,tn,fp,fn,tp/total,tn/total,fp/total,fn/total,acc,ppv,sen)
+            
+            print('%14s  |  %4d  |  %4d   %4d  | %4d  %4d  %4d  %4d  |  %.3f   %.3f   %.3f   %.3f  |  %.3f  %.3f  %.3f' % (printstring))
+    
+    tp, fp, tn, fn = np.sum(metrics, axis = 0)
     total = tp + fn + tn + fp
     
-    print('Of %d nucleotides:\n' % (total))
+    print('\nOf %d nucleotides:\n' % (total))
     
     print('%d true positives (%.2f%%)' % (tp, (float(tp)/total)*100))
     print('%d true negatives (%.2f%%)' % (tn, (float(tn)/total)*100))
@@ -140,52 +84,46 @@ def runmetrics(predicted, actual, setname, machine):
 
 
 
-def outputs(seq, actu, pred, ep, foldername = ''):
+def writeoutput(sequence, actual, predicted, machine, epoch = None, k = None):
     
-    zsnames = ['cuniculi', 'vnecatrix', 'celegans', 'nidulansM', 'TabacumC', 'cryptomonasC', 'musM', 'gallisepticum', 'syne', 'ecoli', 'subtilis', 'desulfuricans', 'reinhardtiiC', 'maritima', 'tenax', 'volcanii']
-    ndict = {0 : 'A', 1 : 'C', 2 : 'G', 3 : 'U', 4 : 'X', 5 : 'E'}
-    ldict = {0 : 'U', 1 : 'P', 2 : 'E'}
+    testnames = ['cuniculi', 'vnecatrix', 'celegans', 'nidulansM',
+               'TabacumC', 'cryptomonasC', 'musM', 'gallisepticum',
+               'syne', 'ecoli', 'subtilis', 'desulfuricans',
+               'reinhardtiiC', 'maritima', 'tenax', 'volcanii']
     
-    if foldername:
-        foldername = '-' + foldername
+    ndict = {0 : 'A', 1 : 'C', 2 : 'G', 3 : 'U', 4 : 'X'}
+    
+    
+    if machine == 'RNN':
+        sequencelengths = [np.trim_zeros(np.sum(act, axis = -1)).size for act in actual]
+        sequence = [np.argmax(sequence[i], axis = -1)[:sequencelengths[i]] for i in range(sequence.shape[0])]
+        actual = [np.argmax(actual[i], axis = -1)[:sequencelengths[i]] for i in range(actual.shape[0])]
+        probability = [predicted[i,:,1][:sequencelengths[i]] for i in range(predicted.shape[0])]
+        predicted = [np.argmax(predicted[i], axis = -1)[:sequencelengths[i]] for i in range(predicted.shape[0])]
+        
+        outputdirectory = 'text/rnn/epoch%02d/' % (epoch,)
+        headerstring = 'Epoch %02d' % (epoch,)
+        
+    if machine == 'HMM':
+        outputdirectory = 'text/hmm/order%d/' % (k,)
+        headerstring = 'Order %d' % (k,)
+    
+    if not os.path.exists(outputdirectory):
+        os.makedirs(outputdirectory)
     
     # text output
     for j in range(16):
         
-        textfile = open('text/%.5s/epoch%02d.txt' % (zsnames[j], ep), 'w+')
-        textfile.write('Epoch %02d\n\n' % (ep))
+        textfile = open(outputdirectory + '%s-stateprediction.txt' % (testnames[j],), 'w+')
+        textfile.write('%s  %s \n\n' % (headerstring, testnames[j]))
         
-        seqletter = np.argmax(seq[j], axis = -1)
-        actuletter = np.argmax(actu[j], axis = -1)
-        predletter = np.argmax(pred[j], axis = -1)
-        
-        for i in range(1562):
-            printstr = '%s  %s  %s  %d\n' % (ndict[seqletter[i]], ldict[actuletter[i]], ldict[predletter[i]], actuletter[i] == predletter[i])
-            textfile.write(printstr)
+        if machine == "RNN":
+            for i, (x, y, yhat, prob) in enumerate(zip(sequence[j], actual[j], predicted[j], probability[j])):
+                printstr = '%d  %s  %d  %d  %0.4f\n' % (i+1, ndict[x], y, yhat, prob)
+                textfile.write(printstr)
+        if machine == "HMM":
+            for i, (x, y, yhat) in enumerate(zip(sequence[j], actual[j], predicted[j])):
+                printstr = '%d  %s  %d  %d\n' % (i+1, ndict[x], y, yhat)
+                textfile.write(printstr)
         textfile.write('\n')
         textfile.close()
-
-
-
-def hmmoutputs(seq, actu, pred, k, foldername = ''):
-    
-    zsnames = ['cuniculi', 'vnecatrix', 'celegans', 'nidulansM', 'TabacumC', 'cryptomonasC', 'musM', 'gallisepticum', 'syne', 'ecoli', 'subtilis', 'desulfuricans', 'reinhardtiiC', 'maritima', 'tenax', 'volcanii']
-    ndict = {0 : 'A', 1 : 'C', 2 : 'G', 3 : 'U', 4 : 'X', 5 : 'E'}
-    ldict = {0 : 'U', 1 : 'P', 2 : 'E'}
-    
-    if foldername:
-        foldername = '-' + foldername
-    
-    # text output
-    for s, a, p, zsname in zip(seq, actu, pred, zsnames):
-        
-        textfile = open('hmmtext/%.5s/epoch%02d.txt' % (zsname, k), 'w+')
-        textfile.write('HMM, k = %d\n\n' % (k,))
-        
-        
-        for i in range(s.shape[0]):
-            printstr = '%s  %s  %s  %d\n' % (ndict[s[i]], ldict[a[i]], ldict[p[i]], a[i] == p[i])
-            textfile.write(printstr)
-        textfile.write('\n')
-        textfile.close()
-        

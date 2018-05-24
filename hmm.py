@@ -45,7 +45,9 @@ class HMM:
     
     
     def printtransitions(self):
-        print(self.A, '\n', self.B, '\n')
+        print(self.A)
+        print(self.B)
+        print()
         return
     
     
@@ -72,10 +74,10 @@ class HMM:
     def predictset(self, obs, states, setname, outputs = True):
         
         preds = [self.predict(ob) for ob in obs]
-        tools.runmetrics(preds, states, setname, machine="HMM")
+        tools.runmetrics(states, preds, setname, machine="HMM")
         
         if outputs:
-            tools.hmmoutputs(obs, states, preds, self.order)
+            tools.writeoutput(obs, states, preds, machine = "HMM", k = self.order)
         return preds
     
     
@@ -84,20 +86,11 @@ class HMM:
         np.save(path + "B.npy", self.B)
 
 
-#def getsequences(path):
-    
-    #letters = 'ACGU'
-    #sequences = loadsequences(path)
-    #obs = [np.array([letters.index(i) if i in letters else 4 for i in seq.sequence]) for seq in sequences]
-    
-    #states= [seq.state for seq in sequences]
-    
-    #return obs, states
 
 def getsequences(path):
     # gets sequences and states, returns them as lists of numpy arrays
     sequences, states = getallsamples(path)
-    obs = [np.array(sequence).astype(int) - 1 for sequence in sequences]
+    obs = [np.array(sequence).astype(int) for sequence in sequences]
     states = [np.array(state).astype(int) for state in states]
     
     return obs, states
@@ -118,9 +111,7 @@ if __name__ == "__main__":
     
     # load training & zs sets
     crwobs, crwstates = getsequences("data/crw16s-filtered.txt")
-    zobs, zstates = getsequences("data/zs.txt")
-    
-    print(len(crwobs))
+    testobs, teststates = getsequences("data/testset.txt")
     
     
     if mode == "train":
@@ -134,7 +125,7 @@ if __name__ == "__main__":
         H.B = np.load("hmms/hmmorder%dB.npy" % (k,))
         
         #H.predictset(crwobs, crwstates, "Training Set")
-        H.predictset(zobs, zstates, "Zsuzsanna Set")
+        H.predictset(testobs, teststates, "Test Set")
         
     if mode == "cycle":
         for i in range(1, k+1):
@@ -152,6 +143,6 @@ if __name__ == "__main__":
                 print("\nTrain time: %.1f seconds \n" % (time() - t))
                 H.save("hmms/hmmorder%d" % (i,))
             t = time()
-            H.predictset(crwobs, crwstates, "Training Set")
-            H.predictset(zobs, zstates, "Zsuzsanna Set")
+            #H.predictset(crwobs, crwstates, "Training Set")
+            H.predictset(testobs, teststates, "Test Set")
             print("\nTotal time: %.1f seconds \n" % (time() - t))
