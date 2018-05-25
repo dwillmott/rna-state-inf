@@ -20,11 +20,12 @@ def makeshape(shapetype, a = 0.214, b = 0.6624, outfile = None):
         prob_file.readline()
 
         # read each line, add probability to lists
+        ntides = []
         lstm_probs = []
         for line in prob_file.readlines():
             if line != '\n':
                 splitline = line.split()
-                
+                ntides.append(splitline[1])
                 if shapetype == 'nativestate':
                     lstm_probs.append(float(splitline[2])) # use native state (0 or 1)
                 if shapetype == 'predictedstate':
@@ -32,7 +33,7 @@ def makeshape(shapetype, a = 0.214, b = 0.6624, outfile = None):
         
         prob_file.close()
 
-        #open output file
+        #open output shape file
         outfile = testname + '-%s.shape' % (shapetype,)
         output_file = open(outfolder+outfile, 'w')
 
@@ -43,9 +44,15 @@ def makeshape(shapetype, a = 0.214, b = 0.6624, outfile = None):
             else:
                 shapevalue = ((s-b)/0.5)*lstm_prob+b
             output_file.write('%d %.3f \n' % (i+1, shapevalue))
-
+        
         output_file.close()
-    
+        
+        # write sequence to file for gtfold
+        sequencefile = open('sequences/%s-sequence.txt' % (testname,), 'w')
+        sequence = ''.join(ntides)
+        sequencefile.write(sequence)
+        sequencefile.close()
+
     return
 
 # takes a sequence and shape type and performs (directed) NNTM using gtfold
@@ -86,7 +93,7 @@ def getpairs(structfile):
     
     return set(pairs)
 
-# takes two sets of base pairs and returns PPV, sen, accuracy
+# takes two sets of base pairs and returns PPV, sensitivity, accuracy
 def getmetrics(native, predicted):
     tp = native.intersection(predicted)
     fn = native.difference(predicted)
@@ -98,23 +105,26 @@ def getmetrics(native, predicted):
     
     return PPV, sen, accuracy
 
-# 
+# write PPV, sen, acc for each file to results directory
 def comparects(tocompare):
-    print('\n\n     %s %s direction     \n\n' % (tocompare[:-5], tocompare[-5:]))
+    f = open('results/%s-results.txt' % (tocompare), 'w')
+    
+    f.write('\n     %s %s direction     \n\n\n' % (tocompare[:-5], tocompare[-5:]))
 
     for testname in testnames:
-        print('--------  %s  --------\n' % (testname,))
+        f.write('--------  %s  --------\n\n' % (testname,))
         native_pairs = getpairs('nativestructures/%s-native-nop.ct' % (testname,))
         comparison_pairs = getpairs('structures/%s/%s-%s.ct' % (tocompare, testname, tocompare))
         metrics = getmetrics(native_pairs, comparison_pairs)
-        print('PPV: %0.3f     sen: %0.3f     acc: %0.3f\n' % tuple(metrics))
+        f.write('PPV: %0.3f     sen: %0.3f     acc: %0.3f\n\n' % tuple(metrics))
     
+    f.close()
     return
 
 
 if __name__ == '__main__':
     
-    for direc in ['shape', 'structures', 'results']:
+    for direc in ['sequences', 'shape', 'structures', 'results']:
         if not os.path.exists(direc):
             os.makedirs(direc)
     
