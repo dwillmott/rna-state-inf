@@ -117,12 +117,12 @@ if __name__ == "__main__":
     if mode == "train":
         H = HMM(5, k)
         H.train(crwstates, crwobs, verbose = False)
-        H.save("hmms/hmmorder%d" % (k,))
+        H.save("saved/hmms/hmmorder%d" % (k,))
         
     if mode == "run":
         H = HMM(5, k)
-        H.A = np.load("hmms/hmmorder%dA.npy" % (k,))
-        H.B = np.load("hmms/hmmorder%dB.npy" % (k,))
+        H.A = np.load("saved/hmms/hmmorder%dA.npy" % (k,))
+        H.B = np.load("saved/hmms/hmmorder%dB.npy" % (k,))
         
         #H.predictset(crwobs, crwstates, "Training Set")
         H.predictset(testobs, teststates, "Test Set")
@@ -134,14 +134,14 @@ if __name__ == "__main__":
             print("\n\nHMM with %d previous states \n\n" % (i,))
             
             try:
-                H.A = np.load("hmms/hmmorder%dA.npy" % (i,))
-                H.B = np.load("hmms/hmmorder%dB.npy" % (i,))
+                H.A = np.load("saved/hmms/hmmorder%dA.npy" % (i,))
+                H.B = np.load("saved/hmms/hmmorder%dB.npy" % (i,))
             except IOError:
                 print("Count not find order %d HMM. Training:" % (i,))
                 t = time()
                 H.train(crwstates, crwobs, verbose = False)
                 print("\nTrain time: %.1f seconds \n" % (time() - t))
-                H.save("hmms/hmmorder%d" % (i,))
+                H.save("saved/hmms/hmmorder%d" % (i,))
             t = time()
             #H.predictset(crwobs, crwstates, "Training Set")
             H.predictset(testobs, teststates, "Test Set")

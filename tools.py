@@ -4,18 +4,14 @@ import time
 import sys
 
 
-def makernndirs():    
-    dirs = ['rnns', 'predictions', 'predictions/rnn']
-    
-    for d in ['rnns', 'predictions', 'predictions/rnn']:
+def makernndirs():
+    for d in ['saved', 'saved/rnns', 'predictions', 'predictions/rnn']:
         if not os.path.exists(d):
             os.makedirs(d)
 
 
-def makehmmdirs():
-    dirs = ['hmms', 'predictions', 'predictions/rnn']
-    
-    for d in ['hmms', 'predictions', 'predictions/rnn']:
+def makehmmdirs():    
+    for d in ['saved', 'saved/hmms', 'predictions', 'predictions/rnn']:
         if not os.path.exists(d):
             os.makedirs(d)
 

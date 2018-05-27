@@ -143,7 +143,7 @@ for i in range(epochs):
     if args.outputs:
         tools.writeoutput(testset_x, testset_y, testset_yhat, machine = "RNN", epoch = i+1)
     
-    model.save("rnns/rnnepoch%02d.h5" % (i+1))
+    model.save("saved/rnns/rnnepoch%02d.h5" % (i+1))
     print('(%4.1f seconds)\n\n' % (time() - t1))
     sys.stdout.flush()
 
