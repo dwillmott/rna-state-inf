@@ -29,22 +29,25 @@ Required Software and Packages
 * gtfold 1.16
 * (Optional) CUDA 8.0 and cuDNN 5.1
 
-State Inference Instructions
+Instructions
 ------
 
 1) Clone this repository, install all required packages above.
 
-2) Get data. The training and testing sets in the paper are available from [http://ms.uky.edu/~dwi239/rnastateinf-data.zip]; unzip this into the git directory. Or, if you want to train or test using your own data, the helper file makedata.py will convert .ct files into a format the neural network and HMM will understand.
+2) Get data, available at [http://ms.uky.edu/~dwi239/rnastateinf-data.zip]. This will contain training and testing data for the neural network and HMM in the 'data' directory, and the output of the neural network used to direct NNTM in the 'probabilities' directory. Unzip this into the cloned directory.
 
-Then you're all set; run the RNN with
+State Inference
+------
+
+Type
 
 ```python rnn.py```
 
-to run with the paper's hyperparameters, or use the command line arguments to choose your own. For example, to train and test an RNN with a learning rate of 0.01 and a network with three hidden layers of sizes 300, 200, and 100, run
+to begin training and testing a neural network with the architecture and hyperparameters from the paper, or use the command line arguments to choose your own. For example, to train and test an RNN with a learning rate of 0.01 and a network with three bidirectional LSTM hidden layers of sizes 300, 200, and 100, run
 
 ```python rnn.py --lr 0.01 --hiddensizes 300 200 100```
 
-The HMM has two command line arguments: k, the order of the HMM, and the mode. There are three modes: 'train' trains and saves an HMM of order k, 'run' uses a saved HMM of order k to perform inference on the test set, and 'cycle' does train' and 'run' using all orders of HMM from 1 to k. So, to train an order 4 HMM, you run
+The HMM has two command line arguments: the mode, and k, the order of the HMM. There are three modes: 'train' trains and saves an HMM of order k, 'run' uses a saved HMM of order k to perform inference on the test set, and 'cycle' does train' and 'run' using all orders of HMM from 1 to k. So, to train an order 4 HMM, type
 
 ```python hmm.py 4 train```
 
@@ -55,4 +58,4 @@ The method.py file takes the output of the neural network and uses it to perform
 
 ```python method.py```
 
-will generate SHAPE and produce three predicted structures: no SHAPE direction, native state direction, and predicted state direction. It will print PPV, sensitivity, and accuracy of all three predictions.
+will generate SHAPE and produce three predicted structures for each sequence: no SHAPE direction, native state direction, and predicted state direction. It will print PPV, sensitivity, and accuracy of all three predictions.
