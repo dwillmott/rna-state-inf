@@ -2,8 +2,6 @@ import argparse
 import numpy as np
 
 import os
-os.environ['THEANO_FLAGS'] = 'device=cuda0,floatX=float32'
-os.environ['CPLUS_INCLUDE_PATH'] = '/usr/local/cuda/include'
 
 import keras as k
 import tools
