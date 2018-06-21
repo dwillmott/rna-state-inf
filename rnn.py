@@ -126,11 +126,7 @@ for i in range(epochs):
     print('----------------------\nTraining Epoch %d\n' % (i+1))
     
     # train
-    #for j in range(trainsize//batchsize):
-        #batch_x, batch_y = next(batchgenerator)
-        #loss = model.train_on_batch(batch_x, batch_y)
-        #if j % 10 == 0 and args.verbose:
-            #print(trainsize//batchsize, j, loss)
+    loss = model.fit_generator(batchgenerator, steps_per_epoch = trainsize//batchsize)
     
     # predict on test set, print results
     testset_yhat = model.predict(testset_x)
