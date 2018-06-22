@@ -22,7 +22,7 @@ np.random.seed(554433)
 # command line args
 parser = argparse.ArgumentParser()
 parser.add_argument("--epochs", default = 50, type = int)
-parser.add_argument("--batchsize", default = 50, type = int)
+parser.add_argument("--batchsize", default = 32, type = int)
 parser.add_argument("--samples", default = 0, type = int) # 0 = largest permissible
 parser.add_argument("--timesteps", default = 0, type = int) # 0 = max of input dataset
 parser.add_argument("--testprop", default = 0.5, type = float)
@@ -64,6 +64,15 @@ hiddensizes = args.hiddensizes
 if timesteps == 0:
     timesteps = None
 
+trainfile = 'data/crw16s-filtered.txt'
+testfile = 'data/testset.txt'
+
+# set up training & test sets
+trainsize = makebatches.findsize(trainfile)
+batchgenerator = makebatches.batch_generator(trainfile, batchsize, length = timesteps)
+
+testset_x, testset_y = makebatches.makebatch(testfile, 16, np.arange(20), 35)
+
     
 if args.load:
     if not loadfile:
@@ -75,11 +84,8 @@ if args.load:
         print('Cannot find loadfile %s' % (loadfile,))
         quit()
     
-    for testset, testsetlabels, setname in testsets:
-        testpredictions = model.predict(testset, batch_size = batchsize, verbose = args.verbose)
-        tools.runmetrics(testpredictions, testsetlabels, setname = setname, machine = "RNN")
-        if setname == 'Zsuzsanna Set':
-            tools.outputs(testset, testsetlabels, testpredictions, 70)
+    testset_yhat = model.predict(testset_x, batch_size = batchsize, verbose = args.verbose)
+    tools.runmetrics(testset_y, testset_yhat, setname = "Test Set", machine = "RNN")
     
     quit()
 
@@ -87,7 +93,7 @@ if args.load:
 # make model
 model = Sequential()
 
-convargdict = {'kernel_size': kernelsize, 'strides':1, 'activation':'relu',
+convargdict = {'kernel_size':kernelsize, 'strides':1, 'activation':'relu',
                'padding':'same', 'kernel_regularizer':regularizer}
 
 lstmargdict = {'return_sequences':True, 'kernel_regularizer':regularizer,
@@ -112,13 +118,6 @@ print(model.summary())
 
 # make output directories
 tools.makernndirs()
-
-# set up training, time variables
-trainsize = makebatches.findsize('data/crw16s-filtered.txt')
-batchgenerator = makebatches.batch_generator('data/crw16s-filtered.txt', batchsize, length = timesteps)
-
-testset_x, testset_y = makebatches.makebatch('data/testset.txt', 16, np.arange(16), 16)
-
 metrics = []
 t1 = time()
 
@@ -142,7 +141,7 @@ for i in range(epochs):
     sys.stdout.flush()
 
 print
-for i in acc:
-    print(('(%02.3f %02.3f %02.3f) '*len(i)) % tuple([j for k in i for j in k]))
+for i in metrics:
+    print(('(%02.3f %02.3f %02.3f) \n'*len(i)) % tuple([j for k in i for j in k]))
 
 model.save("rnnfinal.h5")
