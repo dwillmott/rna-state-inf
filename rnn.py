@@ -71,7 +71,7 @@ testfile = 'data/testset.txt'
 trainsize = makebatches.findsize(trainfile)
 batchgenerator = makebatches.batch_generator(trainfile, batchsize, length = timesteps)
 
-testset_x, testset_y = makebatches.makebatch(testfile, 16, np.arange(20), 35)
+testset_x, testset_y = makebatches.makebatch(testfile, 16, np.arange(16), 16)
 
     
 if args.load:
