@@ -34,7 +34,7 @@ Instructions
 
 1) Clone this repository, install all required packages above.
 
-2) Get data, available at [http://ms.uky.edu/~dwi239/rnastateinf-data.zip]. This will contain training and testing data for the neural network and HMM in the 'data' directory, and the output of the neural network used to direct NNTM in the 'probabilities' directory. Unzip this into the cloned directory.
+2) Get data, available at [http://www.ms.uky.edu/~dmu228/rna_lstm/rnastateinf-data/]. This will contain training and testing data for the neural network and HMM in the 'data' directory, and the output of the neural network used to direct NNTM in the 'probabilities' directory. Place these into the cloned directory.
 
 State Inference
 ------
